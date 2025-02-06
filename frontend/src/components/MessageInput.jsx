@@ -3,11 +3,11 @@ import { useChatStore } from "../store/useChatStore";
 import { Image, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
 
-const MessageInput = () => {
+const MessageInput = ({ activeMessage, setActiveMessage }) => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
-  const { sendMessage } = useChatStore();
+  const { sendMessage, editMessage } = useChatStore();
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -32,18 +32,35 @@ const MessageInput = () => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
 
-    try {
-      await sendMessage({
-        text: text.trim(),
-        image: imagePreview,
-      });
+    if (activeMessage) {
+      // If we are editing a message
+      try {
+        await editMessage(activeMessage, {
+          text: text.trim(),
+          image: imagePreview,
+        });
+        setActiveMessage(null); // Reset active message after editing
+        setText("");
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (error) {
+        console.error("Failed to edit message:", error);
+      }
+    } else {
+      // If sending a new message
+      try {
+        await sendMessage({
+          text: text.trim(),
+          image: imagePreview,
+        });
 
-      // Clear form
-      setText("");
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (error) {
-      console.error("Failed to send message:", error);
+        // Clear form
+        setText("");
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (error) {
+        console.error("Failed to send message:", error);
+      }
     }
   };
 
@@ -76,7 +93,7 @@ const MessageInput = () => {
         className="flex items-center gap-2 w-full rounded-full px-3 py-2 sm:bg-transparent sm:rounded-none sm:p-0"
       >
         {/* Input Chat dengan Tombol di Dalamnya untuk Mobile */}
-        <div className="flex-1 flex items-center  px-3 py-1 rounded-full sm:rounded-none input sm:input sm:input-bordered input-bordered sm:border-none w-full">
+        <div className="flex-1 flex items-center px-3 py-1 rounded-full sm:rounded-none input sm:input sm:input-bordered input-bordered sm:border-none w-full">
           <input
             type="text"
             className="w-full text-sm sm:text-base px-2 py-1 outline-none bg-transparent"
@@ -95,7 +112,7 @@ const MessageInput = () => {
           {/* Tombol Upload Gambar (Hanya Muncul di Mobile) */}
           <button
             type="button"
-            className="text-gray-500 sm:hidden mr-2" // Tambahkan margin kanan
+            className="text-gray-500 sm:hidden mr-2"
             onClick={() => fileInputRef.current?.click()}
           >
             <Image size={20} />
